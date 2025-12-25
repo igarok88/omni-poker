@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Poker Genius: Global Edition</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #1e293b;
+        --border: #334155;
+        --accent: #38bdf8;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+
+        --pair: #f59e0b;
+        --suited: #3b82f6;
+        --off: #10b981;
+
+        --c-spade: #555555;
+        --c-heart: #ef4444;
+        --c-club: #000000;
+        --c-diamond: #ff6b6b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", system-ui, sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        margin: 0;
+        padding: 10px;
+        text-align: center;
+        user-select: none;
+        padding-bottom: 80px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+      }
+
+      .layout-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .area-cards {
+        order: 1;
+      }
+      .area-stats {
+        order: 2;
+      }
+      .area-picker {
+        order: 3;
+      }
+      .area-range {
+        order: 4;
+      }
+
+      @media (min-width: 1024px) {
+        .layout-grid {
+          display: grid;
+          grid-template-columns: 1.4fr 0.6fr;
+          grid-template-areas:
+            "cards stats"
+            "picker stats"
+            "range range";
+          gap: 20px;
+          align-items: start;
+        }
+
+        .area-cards {
+          grid-area: cards;
+          order: unset;
+        }
+        .area-stats {
+          grid-area: stats;
+          order: unset;
+        }
+        .area-picker {
+          grid-area: picker;
+          order: unset;
+        }
+        .area-range {
+          grid-area: range;
+          order: unset;
+        }
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .label {
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--muted);
+        letter-spacing: 1px;
+      }
+      .btn-mini {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        border-radius: 4px;
+        padding: 2px 8px;
+        cursor: pointer;
+        font-size: 10px;
+      }
+      .btn-mini:hover {
+        color: #fff;
+        border-color: #fff;
+      }
+
+      .slots-row {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        min-height: 80px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+
+      .card {
+        width: 54px;
+        height: 78px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 2px dashed var(--border);
+        border-radius: 6px;
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        font-size: 18px;
+        color: #475569;
+        transition: transform 0.1s;
+      }
+      .card.active {
+        border-color: var(--accent);
+        background: rgba(56, 189, 248, 0.1);
+        transform: scale(1.05);
+        color: var(--accent);
+      }
+      .card.filled {
+        background: #f8fafc;
+        border: 1px solid #000;
+        border-style: solid;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+      }
+
+      .card.r-s {
+        color: var(--c-spade);
+      }
+      .card.r-h {
+        color: var(--c-heart);
+      }
+      .card.r-c {
+        color: var(--c-club);
+      }
+      .card.r-d {
+        color: var(--c-diamond);
+      }
+
+      .val {
+        position: absolute;
+        top: 2px;
+        left: 4px;
+        font-weight: 900;
+        font-size: 14px;
+        line-height: 1;
+      }
+      .suit-lg {
+        font-size: 30px;
+      }
+      .suit-sm {
+        position: absolute;
+        top: 16px;
+        left: 4px;
+        font-size: 10px;
+      }
+
+      .picker {
+        background: var(--panel);
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        margin-top: 5px;
+      }
+
+      .p-row {
+        display: flex;
+        justify-content: center;
+        gap: 4px;
+        margin-bottom: 4px;
+        flex-wrap: wrap;
+      }
+
+      @media (min-width: 1024px) {
+        .p-row {
+          flex-wrap: nowrap;
+        }
+      }
+
+      .p-key {
+        flex: 1 0 auto;
+        min-width: 38px;
+        height: 44px;
+        max-width: 44px;
+        background: #e2e8f0;
+        border-radius: 3px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 25px;
+        font-weight: 900;
+        cursor: pointer;
+        gap: 1px;
+      }
+      .p-key-suit {
+        font-size: 25px;
+        margin-left: 1px;
+        margin-bottom: 2px;
+      }
+
+      .p-key:hover {
+        transform: scale(1.1);
+        z-index: 10;
+      }
+      .p-key.sel {
+        background: #334155;
+        color: #64748b;
+        pointer-events: none;
+        opacity: 0.5;
+      }
+
+      .r-s .p-key {
+        color: var(--c-spade);
+      }
+      .r-h .p-key {
+        color: var(--c-heart);
+      }
+      .r-c .p-key {
+        color: var(--c-club);
+      }
+      .r-d .p-key {
+        color: var(--c-diamond);
+      }
+
+      .matrix-panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px;
+      }
+
+      .matrix-grid {
+        display: grid;
+        grid-template-columns: repeat(13, 1fr);
+        gap: 1px;
+        background: #000;
+        border: 1px solid #333;
+        margin-top: 5px;
+        touch-action: none;
+      }
+
+      .cell {
+        height: 30px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 10px;
+        background: #0f172a;
+        color: #475569;
+        cursor: pointer;
+        font-weight: 700;
+        border-radius: 2px;
+      }
+
+      .cell.pair {
+        background: var(--pair);
+        color: #000;
+      }
+      .cell.suited {
+        background: var(--suited);
+        color: #fff;
+      }
+      .cell.off {
+        background: var(--off);
+        color: #000;
+      }
+
+      .opp-controls {
+        display: flex;
+        justify-content: center;
+        gap: 4px;
+        margin-bottom: 5px;
+      }
+      .opp-btn {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 4px 8px;
+        font-size: 10px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .opp-btn.active {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: rgba(56, 189, 248, 0.1);
+        font-weight: bold;
+      }
+
+      .matrix-controls {
+        display: flex;
+        gap: 5px;
+        margin-top: 8px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .chip {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 5px 10px;
+        font-size: 10px;
+        border-radius: 20px;
+        cursor: pointer;
+      }
+      .chip:hover {
+        border-color: var(--accent);
+        color: var(--text);
+      }
+
+      .collapsible-content {
+        display: block;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+      }
+      .collapsible-content.collapsed {
+        display: none;
+      }
+      .collapse-btn {
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 14px;
+        padding: 0 5px;
+      }
+      .collapse-btn:hover {
+        color: var(--text);
+      }
+
+      .side-panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 15px;
+        height: 100%;
+      }
+
+      .eq-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 10px;
+      }
+      .eq-val {
+        font-size: 56px;
+        font-weight: 900;
+        line-height: 0.9;
+        color: var(--accent);
+      }
+      .eq-sub {
+        font-size: 11px;
+        color: var(--muted);
+        text-align: right;
+      }
+
+      .odds-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 8px;
+        border-radius: 6px;
+      }
+      .input-group {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .input-dark {
+        width: 70px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: #fff;
+        padding: 6px;
+        text-align: center;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+      .odds-result {
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .bars-wrap {
+        margin-top: 15px;
+      }
+      .bar-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 4px;
+        font-size: 11px;
+      }
+      .bar-lbl {
+        width: 60px;
+        text-align: right;
+        margin-right: 8px;
+        color: var(--muted);
+      }
+      .bar-tr {
+        flex: 1;
+        background: #334155;
+        height: 5px;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .bar-fl {
+        height: 100%;
+        transition: width 0.3s;
+      }
+      .bar-val {
+        width: 30px;
+        text-align: right;
+        color: #fff;
+        font-weight: bold;
+      }
+
+      .tabs {
+        display: flex;
+        background: var(--panel);
+        padding: 4px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border: 1px solid var(--border);
+      }
+      .tab {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        padding: 8px;
+        font-size: 11px;
+        font-weight: 800;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      .tab.active {
+        background: #334155;
+        color: #fff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .custom-select-wrapper {
+        position: relative;
+        user-select: none;
+        width: 100%;
+        margin-bottom: 10px;
+        z-index: 100;
+      }
+
+      .custom-select-trigger {
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: border-color 0.2s;
+      }
+
+      .custom-select-trigger:hover {
+        border-color: var(--accent);
+      }
+
+      .custom-options {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        display: none;
+        z-index: 999;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      }
+
+      .custom-options.open {
+        display: block;
+      }
+
+      .option {
+        padding: 10px 12px;
+        font-size: 12px;
+        color: var(--muted);
+        cursor: pointer;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .option:hover {
+        background: #334155;
+        color: #fff;
+      }
+
+      .arrow {
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .reset-btn {
+        width: 100%;
+        background: #ef4444;
+        color: white;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 15px;
+      }
+
+      @media (min-width: 1024px) {
+        .p-key {
+          width: 42px;
+          height: 48px;
+          font-size: 15px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="tabs">
+        <button class="tab active" onclick="setMode('range')" id="tab-range">
+          TRAINING (VS RANGE)
+        </button>
+        <button class="tab" onclick="setMode('manual')" id="tab-manual">
+          PVP (HAND VS HAND)
+        </button>
+      </div>
+
+      <div class="custom-select-wrapper">
+        <div class="custom-select-trigger" onclick="toggleDropdown()">
+          <span id="scenario-text">⚡ Load Scenario...</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="custom-options" id="dropdown-options">
+          <div
+            class="option"
+            onclick="pickScenario('cooler', 'Cooler (AA vs KK)')"
+          >
+            Cooler (AA vs KK)
+          </div>
+          <div class="option" onclick="pickScenario('flip', 'Flip (AK vs QQ)')">
+            Flip (AK vs QQ)
+          </div>
+          <div
+            class="option"
+            onclick="pickScenario('domination', 'Domination (AK vs AQ)')"
+          >
+            Domination (AK vs AQ)
+          </div>
+          <div
+            class="option"
+            onclick="pickScenario('set_flush', 'Set vs Flush Draw')"
+          >
+            Set vs Flush Draw
+          </div>
+        </div>
+      </div>
+
+      <div class="layout-grid">
+        <div class="area-cards">
+          <div class="header">
+            <span class="label">Hero (You)</span>
+            <button class="btn-mini" onclick="clearSlots('hero')">Clear</button>
+          </div>
+          <div class="slots-row" id="slots-hero"></div>
+
+          <div id="ui-villain" style="display: none">
+            <div class="header">
+              <span class="label" style="color: #f87171"
+                >Villain (Opponent)</span
+              >
+              <button class="btn-mini" onclick="clearSlots('villain')">
+                Clear
+              </button>
+            </div>
+            <div class="slots-row" id="slots-villain"></div>
+          </div>
+
+          <div class="header">
+            <span class="label">Board</span>
+            <button class="btn-mini" onclick="clearSlots('board')">
+              Clear
+            </button>
+          </div>
+          <div class="slots-row" id="slots-board"></div>
+        </div>
+
+        <div class="area-stats">
+          <div class="side-panel">
+            <div class="header">
+              <span class="label" style="color: var(--accent)">WIN EQUITY</span>
+            </div>
+            <div class="eq-row">
+              <div class="eq-val" id="eq-val">0%</div>
+              <div class="eq-sub" id="hand-status">...</div>
+            </div>
+            <div class="odds-row">
+              <div class="input-group">
+                Pot:
+                <input
+                  type="number"
+                  id="pot"
+                  value="100"
+                  class="input-dark"
+                  oninput="update()"
+                />
+              </div>
+              <div class="input-group">
+                Call:
+                <input
+                  type="number"
+                  id="call"
+                  value="50"
+                  class="input-dark"
+                  oninput="update()"
+                />
+              </div>
+              <div class="odds-result" id="odds-res">-</div>
+            </div>
+            <div id="dist-bars" class="bars-wrap"></div>
+            <div
+              class="label"
+              style="text-align: center; margin-bottom: 4px; font-size: 9px"
+            >
+              Opponent Count:
+            </div>
+            <div class="opp-controls" id="opp-btns"></div>
+          </div>
+        </div>
+
+        <div class="area-picker">
+          <div id="picker" class="picker"></div>
+          <button class="reset-btn" onclick="resetApp()">RESET ALL</button>
+        </div>
+
+        <div class="area-range">
+          <div class="matrix-panel" id="ui-range">
+            <div class="header">
+              <span class="label">Villain Range</span>
+              <div style="display: flex; align-items: center; gap: 5px">
+                <div
+                  style="font-size: 10px; text-align: right; color: #fff"
+                  id="range-stats"
+                >
+                  100%
+                </div>
+                <button class="collapse-btn" onclick="toggleRange()">▼</button>
+              </div>
+            </div>
+
+            <div id="range-content" class="collapsible-content">
+              <div
+                class="matrix-grid"
+                id="matrix"
+                onmousedown="startDrag()"
+                onmouseup="endDrag()"
+                onmouseleave="endDrag()"
+              ></div>
+
+              <div
+                class="label"
+                style="
+                  text-align: center;
+                  margin-top: 8px;
+                  margin-bottom: 4px;
+                  font-size: 9px;
+                "
+              >
+                Range Presets:
+              </div>
+              <div class="matrix-controls">
+                <button class="chip" onclick="setPreset(100)">All</button>
+                <button class="chip" onclick="setPreset(20)">Top 20%</button>
+                <button class="chip" onclick="setPreset('pairs')">Pairs</button>
+                <button class="chip" onclick="setPreset('broadway')">
+                  Broad
+                </button>
+                <button class="chip" onclick="setPreset(0)">Clear</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const suits = [
+        { s: "s", c: "♠", css: "r-s" },
+        { s: "h", c: "♥", css: "r-h" },
+        { s: "c", c: "♣", css: "r-c" },
+        { s: "d", c: "♦", css: "r-d" },
+      ];
+      const ranks = [
+        "A",
+        "K",
+        "Q",
+        "J",
+        "10",
+        "9",
+        "8",
+        "7",
+        "6",
+        "5",
+        "4",
+        "3",
+        "2",
+      ];
+
+      let deck = [],
+        hero = [null, null],
+        villain = [null, null],
+        board = [null, null, null, null, null];
+      let active = { area: "hero", idx: 0 };
+      let appMode = "range";
+      let oppCount = 1;
+      let selectedRange = new Set();
+      let combosMap = {};
+      let isDragging = false;
+      let dragMode = true;
+
+      const scenarios = {
+        cooler: { h: ["Ah", "As"], v: ["Kh", "Ks"], b: [] },
+        flip: { h: ["Ah", "Ks"], v: ["Qh", "Qd"], b: [] },
+        domination: { h: ["Ah", "Kh"], v: ["Ad", "Qd"], b: [] },
+        set_flush: { h: ["7s", "7c"], v: ["As", "Ks"], b: ["2s", "9s", "7d"] },
+      };
+
+      function init() {
+        deck = [];
+        suits.forEach((s) =>
+          ranks.forEach((r) => {
+            let v = parseInt(r);
+            if (r == "J") v = 11;
+            if (r == "Q") v = 12;
+            if (r == "K") v = 13;
+            if (r == "A") v = 14;
+            deck.push({ id: r + s.s, r, s, v });
+          })
+        );
+
+        buildMatrix();
+        renderOppBtns();
+        setPreset(100);
+        renderSlots();
+        renderPicker();
+      }
+
+      function setMode(mode) {
+        appMode = mode;
+        document.getElementById("tab-range").className = `tab ${
+          mode == "range" ? "active" : ""
+        }`;
+        document.getElementById("tab-manual").className = `tab ${
+          mode == "manual" ? "active" : ""
+        }`;
+        document.getElementById("ui-range").style.display =
+          mode == "range" ? "block" : "none";
+        document.getElementById("ui-villain").style.display =
+          mode == "manual" ? "block" : "none";
+        if (mode == "manual" && active.area == "hero" && active.idx > 1)
+          active = { area: "villain", idx: 0 };
+        update();
+      }
+
+      function loadScenario(key) {
+        if (!key || !scenarios[key]) return;
+        setMode("manual");
+        const s = scenarios[key];
+        hero = [
+          deck.find((c) => c.id == s.h[0]),
+          deck.find((c) => c.id == s.h[1]),
+        ];
+        villain = [
+          deck.find((c) => c.id == s.v[0]),
+          deck.find((c) => c.id == s.v[1]),
+        ];
+        board = [null, null, null, null, null];
+        s.b.forEach((id, i) => (board[i] = deck.find((c) => c.id == id)));
+        update();
+      }
+
+      function toggleRange() {
+        const content = document.getElementById("range-content");
+        const btn = document.querySelector(".collapse-btn");
+        content.classList.toggle("collapsed");
+      }
+
+      function buildMatrix() {
+        const div = document.getElementById("matrix");
+        div.innerHTML = "";
+        for (let r1 = 0; r1 < 13; r1++) {
+          for (let r2 = 0; r2 < 13; r2++) {
+            const cell = document.createElement("div");
+            let txt = "",
+              type = "";
+            if (r1 === r2) {
+              txt = ranks[r1] + ranks[r1];
+              type = "pair";
+            } else if (r1 < r2) {
+              txt = ranks[r1] + ranks[r2] + "s";
+              type = "suited";
+            } else {
+              txt = ranks[r2] + ranks[r1] + "o";
+              type = "off";
+            }
+
+            cell.className = "cell";
+            cell.innerText = txt;
+            cell.dataset.h = txt;
+            cell.dataset.t = type;
+            cell.onmousedown = () => {
+              startDrag();
+              dragMode = !selectedRange.has(txt);
+              toggleCell(txt, dragMode);
+            };
+            cell.onmouseover = () => {
+              if (isDragging) toggleCell(txt, dragMode);
+            };
+
+            div.appendChild(cell);
+            generateCombos(txt, type, r1, r2);
+          }
+        }
+        div.addEventListener(
+          "touchstart",
+          (e) => {
+            e.preventDefault();
+            startDrag();
+          },
+          { passive: false }
+        );
+        div.addEventListener(
+          "touchmove",
+          (e) => {
+            e.preventDefault();
+            if (!isDragging) return;
+            const t = e.touches[0];
+            const el = document.elementFromPoint(t.clientX, t.clientY);
+            if (el && el.classList.contains("cell"))
+              toggleCell(el.dataset.h, true);
+          },
+          { passive: false }
+        );
+        div.addEventListener("touchend", () => {
+          isDragging = false;
+          update();
+        });
+      }
+
+      function generateCombos(label, type, idx1, idx2) {
+        let list = [];
+        if (type === "pair") {
+          let r = ranks[idx1];
+          for (let i = 0; i < 4; i++)
+            for (let j = i + 1; j < 4; j++)
+              list.push([r + suits[i].s, r + suits[j].s]);
+        } else {
+          let rA = type === "suited" ? ranks[idx1] : ranks[idx2];
+          let rB = type === "suited" ? ranks[idx2] : ranks[idx1];
+          if (type === "suited") {
+            for (let i = 0; i < 4; i++)
+              list.push([rA + suits[i].s, rB + suits[i].s]);
+          } else {
+            for (let i = 0; i < 4; i++)
+              for (let j = 0; j < 4; j++)
+                if (i !== j) list.push([rA + suits[i].s, rB + suits[j].s]);
+          }
+        }
+        combosMap[label] = list;
+      }
+
+      function startDrag() {
+        isDragging = true;
+      }
+      function endDrag() {
+        if (isDragging) {
+          isDragging = false;
+          update();
+        }
+      }
+      function toggleCell(label, forceState) {
+        if (forceState) selectedRange.add(label);
+        else selectedRange.delete(label);
+        updateMatrixVisuals();
+      }
+
+      function setPreset(val) {
+        selectedRange.clear();
+        document.querySelectorAll(".cell").forEach((c) => {
+          const h = c.dataset.h,
+            t = c.dataset.t;
+          let sel = false;
+          if (val === 100) sel = true;
+          else if (val === "pairs" && t === "pair") sel = true;
+          else if (val === "broadway") {
+            if (
+              ["A", "K", "Q", "J", "10"].some((x) => h.includes(x)) &&
+              !h.includes("9")
+            )
+              sel = true;
+          } else if (typeof val === "number" && val > 0) {
+            if (t === "pair" && ranks.indexOf(h[0]) < val / 8) sel = true;
+            if (h.includes("A") && (t === "suited" || ranks.indexOf(h[1]) < 4))
+              sel = true;
+          }
+          if (sel) selectedRange.add(h);
+        });
+        updateMatrixVisuals();
+        update();
+      }
+
+      function updateMatrixVisuals() {
+        let combosCount = 0;
+        document.querySelectorAll(".cell").forEach((c) => {
+          if (selectedRange.has(c.dataset.h)) {
+            c.classList.add(c.dataset.t);
+            combosCount +=
+              c.dataset.t === "pair" ? 6 : c.dataset.t === "suited" ? 4 : 12;
+          } else {
+            c.className = "cell";
+          }
+        });
+        document.getElementById("range-stats").innerText = `${(
+          (combosCount / 1326) *
+          100
+        ).toFixed(1)}%`;
+      }
+
+      function renderOppBtns() {
+        const d = document.getElementById("opp-btns");
+        d.innerHTML = "";
+        for (let i = 1; i <= 5; i++) {
+          const b = document.createElement("button");
+          b.className = `opp-btn ${oppCount === i ? "active" : ""}`;
+          b.innerText = i === 1 ? "1v1" : `vs${i}`;
+          b.onclick = () => {
+            oppCount = i;
+            renderOppBtns();
+            update();
+          };
+          d.appendChild(b);
+        }
+      }
+
+      function update() {
+        const hC = hero.filter((c) => c),
+          bC = board.filter((c) => c);
+        const used = [...hero, ...villain, ...board]
+          .filter((c) => c)
+          .map((c) => c.id);
+
+        renderSlots();
+        renderPicker(used);
+
+        if (hC.length === 2) {
+          const ev = evaluate([...hC, ...bC]);
+          document.getElementById("hand-status").innerText = ev.label;
+          setTimeout(() => runSim(hC, bC, used), 10);
+        } else {
+          document.getElementById("hand-status").innerText = "Select 2 Cards";
+          document.getElementById("eq-val").innerText = "0%";
+          document.getElementById("dist-bars").innerHTML = "";
+          document.getElementById("odds-res").innerText = "-";
+        }
+      }
+
+      function runSim(hC, bC, knownIds) {
+        if (
+          (appMode == "range" && selectedRange.size === 0) ||
+          (appMode == "manual" && villain.filter((c) => c).length < 2)
+        )
+          return;
+
+        let wins = 0,
+          ties = 0,
+          N = 600,
+          dist = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let rangeCombos = [];
+
+        if (appMode == "range") {
+          selectedRange.forEach((lbl) => {
+            combosMap[lbl].forEach((p) => {
+              if (!knownIds.includes(p[0]) && !knownIds.includes(p[1])) {
+                rangeCombos.push([
+                  deck.find((x) => x.id == p[0]),
+                  deck.find((x) => x.id == p[1]),
+                ]);
+              }
+            });
+          });
+          if (rangeCombos.length === 0) {
+            document.getElementById("eq-val").innerText = "Err";
+            return;
+          }
+        }
+
+        for (let i = 0; i < N; i++) {
+          let opps = [];
+          let tempDeck = deck.filter((c) => !knownIds.includes(c.id));
+          let ok = true;
+
+          if (appMode == "manual") {
+            opps.push(villain.filter((c) => c));
+          } else {
+            for (let j = 0; j < oppCount; j++) {
+              if (rangeCombos.length == 0) {
+                ok = false;
+                break;
+              }
+              let rnd =
+                rangeCombos[Math.floor(Math.random() * rangeCombos.length)];
+              if (
+                tempDeck.find((c) => c.id == rnd[0].id) &&
+                tempDeck.find((c) => c.id == rnd[1].id)
+              ) {
+                opps.push(rnd);
+                tempDeck = tempDeck.filter(
+                  (c) => c.id != rnd[0].id && c.id != rnd[1].id
+                );
+              } else {
+                j--;
+              }
+            }
+          }
+          if (!ok) continue;
+
+          let sB = [...bC];
+          while (sB.length < 5)
+            sB.push(
+              tempDeck.splice(Math.floor(Math.random() * tempDeck.length), 1)[0]
+            );
+
+          let myS = evaluate([...hC, ...sB]);
+          let maxOpp = 0;
+          opps.forEach((o) => {
+            let s = evaluate([...o, ...sB]).score;
+            if (s > maxOpp) maxOpp = s;
+          });
+
+          if (myS.score > maxOpp) {
+            wins++;
+            dist[myS.idx]++;
+          } else if (myS.score === maxOpp) ties++;
+        }
+
+        const eq = Math.round((wins / N) * 100);
+        const el = document.getElementById("eq-val");
+        el.innerText = eq + "%";
+        el.style.color =
+          eq > 50 ? "var(--accent)" : eq < 25 ? "#ef4444" : "#f59e0b";
+
+        calcOdds(eq);
+        renderBars(dist, wins);
+      }
+
+      function calcOdds(eq) {
+        const pot = parseFloat(document.getElementById("pot").value) || 0;
+        const call = parseFloat(document.getElementById("call").value) || 0;
+        const res = document.getElementById("odds-res");
+        if (pot === 0 || call === 0) {
+          res.innerText = "-";
+          return;
+        }
+        const req = (call / (pot + call * 2)) * 100;
+        const diff = eq - req;
+        res.innerHTML =
+          diff >= 0
+            ? `<span style="color:#4ade80">CALL</span> (EV+${diff.toFixed(0)}%)`
+            : `<span style="color:#ef4444">FOLD</span>`;
+      }
+
+      function renderSlots() {
+        renderRow("slots-hero", hero, "hero");
+        renderRow("slots-villain", villain, "villain");
+        renderRow("slots-board", board, "board");
+      }
+
+      function renderRow(id, arr, area) {
+        const div = document.getElementById(id);
+        if (!div) return;
+        div.innerHTML = "";
+        arr.forEach((c, i) => {
+          const el = document.createElement("div");
+          const act = active.area === area && active.idx === i;
+          el.className = `card ${act ? "active" : ""} ${
+            c ? "filled " + c.s.css : ""
+          }`;
+          if (c) {
+            el.innerHTML = `<div class="val">${c.r}</div><div class="suit-sm">${c.s.c}</div><div class="suit-lg">${c.s.c}</div>`;
+            el.onclick = () => {
+              arr[i] = null;
+              update();
+            };
+          } else {
+            el.innerHTML = "+";
+            el.onclick = () => {
+              active = { area, idx: i };
+              renderSlots();
+              renderPicker(
+                [...hero, ...villain, ...board]
+                  .filter((x) => x)
+                  .map((x) => x.id)
+              );
+            };
+          }
+          div.appendChild(el);
+        });
+      }
+
+      function renderPicker(used) {
+        if (!used)
+          used = [...hero, ...villain, ...board]
+            .filter((c) => c)
+            .map((c) => c.id);
+        const d = document.getElementById("picker");
+        d.innerHTML = "";
+
+        suits.forEach((s) => {
+          const row = document.createElement("div");
+          row.className = `p-row ${s.css}`;
+          deck
+            .filter((c) => c.s.s == s.s)
+            .forEach((c) => {
+              const btn = document.createElement("div");
+              btn.className = `p-key ${used.includes(c.id) ? "sel" : ""}`;
+              btn.innerHTML = `${c.r}<span class="p-key-suit">${c.s.c}</span>`;
+              btn.onclick = () => {
+                if (used.includes(c.id)) return;
+                if (active.area == "hero") hero[active.idx] = c;
+                else if (active.area == "villain") villain[active.idx] = c;
+                else board[active.idx] = c;
+
+                if (active.area == "hero") {
+                  if (active.idx == 0) active.idx = 1;
+                  else active = { area: "board", idx: 0 };
+                } else if (active.area == "villain") {
+                  if (active.idx == 0) active.idx = 1;
+                  else active = { area: "board", idx: 0 };
+                } else if (active.idx < 4) active.idx++;
+                update();
+              };
+              row.appendChild(btn);
+            });
+          d.appendChild(row);
+        });
+      }
+
+      function renderBars(d, w) {
+        const div = document.getElementById("dist-bars");
+        div.innerHTML = "";
+        if (w == 0) return;
+        const names = [
+          "High",
+          "Pair",
+          "2Pair",
+          "Set",
+          "Str",
+          "Flush",
+          "FH",
+          "Quads",
+          "SF",
+        ];
+        const cols = [
+          "#475569",
+          "#64748b",
+          "#94a3b8",
+          "#3b82f6",
+          "#2563eb",
+          "#4f46e5",
+          "#8b5cf6",
+          "#d946ef",
+          "#f43f5e",
+        ];
+        d.map((v, i) => ({
+          n: names[i],
+          p: Math.round((v / w) * 100),
+          c: cols[i],
+        }))
+          .filter((x) => x.p > 0)
+          .sort((a, b) => b.p - a.p)
+          .slice(0, 4)
+          .forEach((x) => {
+            div.innerHTML += `<div class="bar-item"><div class="bar-lbl">${x.n}</div><div class="bar-tr"><div class="bar-fl" style="width:${x.p}%; background:${x.c}"></div></div><div class="bar-val">${x.p}%</div></div>`;
+          });
+      }
+
+      function clearSlots(area) {
+        if (area == "hero") hero = [null, null];
+        if (area == "villain") villain = [null, null];
+        if (area == "board") board = [null, null, null, null, null];
+        update();
+      }
+
+      function resetApp() {
+        hero = [null, null];
+        villain = [null, null];
+        board = [null, null, null, null, null];
+        active = { area: "hero", idx: 0 };
+        setPreset(100);
+      }
+
+      function evaluate(cards) {
+        const cnt = {},
+          sC = {};
+        cards.forEach((c) => {
+          cnt[c.v] = (cnt[c.v] || 0) + 1;
+          sC[c.s.s] = (sC[c.s.s] || 0) + 1;
+        });
+        const sr = cards.sort((a, b) => b.v - a.v);
+        const fS = Object.keys(sC).find((s) => sC[s] >= 5);
+        const four = Object.keys(cnt).find((k) => cnt[k] == 4);
+        if (four) return { score: 8e9, label: "Quads", idx: 7 };
+        const three = Object.keys(cnt).find((k) => cnt[k] == 3);
+        const pairs = Object.keys(cnt)
+          .filter((k) => cnt[k] == 2)
+          .map(Number)
+          .sort((a, b) => b - a);
+        if (three && pairs.length)
+          return { score: 7e9, label: "Full House", idx: 6 };
+        if (fS) return { score: 6e9, label: "Flush", idx: 5 };
+        let u = [...new Set(sr.map((c) => c.v))];
+        if (u.includes(14)) u.push(1);
+        for (let i = 0; i <= u.length - 5; i++) {
+          if (u[i] - u[i + 4] == 4)
+            return { score: 5e9, label: "Straight", idx: 4 };
+        }
+        if (three) return { score: 4e9, label: "Set", idx: 3 };
+        if (pairs.length >= 2)
+          return { score: 3e9, label: "Two Pairs", idx: 2 };
+        if (pairs.length == 1) return { score: 2e9, label: "Pair", idx: 1 };
+        return { score: 1e9 + sr[0].v, label: "High Card", idx: 0 };
+      }
+
+      function toggleDropdown() {
+        const menu = document.getElementById("dropdown-options");
+        menu.classList.toggle("open");
+
+        const trigger = document.querySelector(".custom-select-trigger");
+        if (menu.classList.contains("open")) {
+          trigger.style.borderColor = "var(--accent)";
+          trigger.style.borderBottomLeftRadius = "0";
+          trigger.style.borderBottomRightRadius = "0";
+        } else {
+          trigger.style.borderColor = "var(--border)";
+          trigger.style.borderRadius = "6px";
+        }
+      }
+
+      function pickScenario(key, text) {
+        document.getElementById("scenario-text").innerText = "⚡ " + text;
+        toggleDropdown();
+        loadScenario(key);
+      }
+
+      window.onclick = function (event) {
+        if (!event.target.closest(".custom-select-wrapper")) {
+          const menu = document.getElementById("dropdown-options");
+          const trigger = document.querySelector(".custom-select-trigger");
+          if (menu.classList.contains("open")) {
+            menu.classList.remove("open");
+            trigger.style.borderColor = "var(--border)";
+            trigger.style.borderRadius = "6px";
+          }
+        }
+      };
+
+      init();
+    </script>
+  </body>
+</html>
