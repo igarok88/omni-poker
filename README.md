@@ -4,7 +4,12 @@
 
 The application is designed for both beginners who want to understand poker math and professionals analyzing complex spots.
 
----
+## 🌐 Live Demo
+
+The application is deployed and ready to use. You don't need to download or install anything.
+Simply click the link below to start analyzing hands immediately on any device:
+
+🚀 **[Launch Omni Poker](https://igarok88.github.io/omni-poker/)**
 
 ## ✨ Key Features
 
@@ -27,7 +32,7 @@ The application is designed for both beginners who want to understand poker math
 
 The application is a **Single File Application**. This means it does not require a server, Node.js, or Python installation.
 
-1.  Download the `poker.html` file.
+1.  Download the `index.html` file.
 2.  Open it in any modern browser (Chrome, Safari, Firefox, Edge).
 3.  Done! No internet is required; all calculations happen locally on your device.
 
