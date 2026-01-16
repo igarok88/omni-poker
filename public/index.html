@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Poker Genius: Global Edition (Refactored)</title>
+    <style>
+      :root {
+        --background-color: #0f172a;
+        --panel-background: #1e293b;
+        --border-color: #334155;
+        --accent-color: #38bdf8;
+        --text-color: #f1f5f9;
+        --muted-text-color: #94a3b8;
+
+        --color-pair: #f59e0b;
+        --color-suited: #3b82f6;
+        --color-offsuit: #10b981;
+
+        --color-suit-spade: #555555;
+        --color-suit-heart: #ef4444;
+        --color-suit-club: #000000;
+        --color-suit-diamond: #ff6b6b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", system-ui, sans-serif;
+        background-color: var(--background-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 10px;
+        text-align: center;
+        user-select: none;
+        padding-bottom: 80px;
+      }
+
+      .main-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+      }
+
+      .layout-grid-container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .area-playing-cards {
+        order: 1;
+      }
+
+      .area-statistics {
+        order: 2;
+      }
+
+      .area-card-picker {
+        order: 3;
+      }
+
+      .area-range-selector {
+        order: 4;
+      }
+
+      @media (min-width: 1024px) {
+        .layout-grid-container {
+          display: grid;
+          grid-template-columns: 1.4fr 0.6fr;
+          grid-template-areas:
+            "cards stats"
+            "picker stats"
+            "range range";
+          gap: 20px;
+          align-items: start;
+        }
+
+        .area-playing-cards {
+          grid-area: cards;
+          order: unset;
+        }
+
+        .area-statistics {
+          grid-area: stats;
+          order: unset;
+        }
+
+        .area-card-picker {
+          grid-area: picker;
+          order: unset;
+        }
+
+        .area-range-selector {
+          grid-area: range;
+          order: unset;
+        }
+      }
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+      }
+
+      .text-label {
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--muted-text-color);
+        letter-spacing: 1px;
+      }
+
+      .villain-range-percent {
+        font-size: 10px;
+        text-align: right;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .range-presets {
+        text-align: center;
+        margin-bottom: 5px;
+      }
+
+      .button-mini {
+        background: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--muted-text-color);
+        border-radius: 4px;
+        padding: 2px 8px;
+        cursor: pointer;
+        font-size: 10px;
+      }
+
+      .button-mini:hover {
+        color: #fff;
+        border-color: #fff;
+      }
+
+      .card-slots-row {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        min-height: 80px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+
+      .playing-card {
+        width: 54px;
+        height: 78px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 2px dashed var(--border-color);
+        border-radius: 6px;
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        font-size: 18px;
+        color: #475569;
+        transition: transform 0.1s;
+      }
+
+      .playing-card.state-active {
+        border-color: var(--accent-color);
+        background: rgba(56, 189, 248, 0.1);
+        transform: scale(1.05);
+        color: var(--accent-color);
+      }
+
+      .playing-card.state-filled {
+        background: #f8fafc;
+        border: 1px solid #000;
+        border-style: solid;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+      }
+
+      .playing-card.suit-style-spade {
+        color: var(--color-suit-spade);
+      }
+
+      .playing-card.suit-style-heart {
+        color: var(--color-suit-heart);
+      }
+
+      .playing-card.suit-style-club {
+        color: var(--color-suit-club);
+      }
+
+      .playing-card.suit-style-diamond {
+        color: var(--color-suit-diamond);
+      }
+
+      .card-rank-text {
+        position: absolute;
+        top: 2px;
+        left: 4px;
+        font-weight: 900;
+        font-size: 14px;
+        line-height: 1;
+      }
+
+      .card-suit-large {
+        font-size: 30px;
+      }
+
+      .card-suit-small {
+        position: absolute;
+        top: 16px;
+        left: 4px;
+        font-size: 10px;
+      }
+
+      .card-picker-panel {
+        background: var(--panel-background);
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        margin-top: 5px;
+      }
+
+      .picker-row {
+        display: flex;
+        justify-content: center;
+        gap: 4px;
+        margin-bottom: 4px;
+        flex-wrap: wrap;
+      }
+
+      @media (min-width: 1024px) {
+        .picker-row {
+          flex-wrap: nowrap;
+        }
+      }
+
+      .picker-key {
+        width: 44px;
+        height: 44px;
+        background: #e2e8f0;
+        border-radius: 3px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 20px;
+        font-weight: 900;
+        cursor: pointer;
+        gap: 1px;
+      }
+
+      .picker-key-suit {
+        font-size: 22px;
+        margin-left: 1px;
+        margin-bottom: 2px;
+      }
+
+      .picker-key:hover {
+        transform: scale(1.1);
+        z-index: 10;
+      }
+
+      .picker-key.state-selected {
+        background: #334155;
+        color: #64748b;
+        pointer-events: none;
+        opacity: 0.5;
+      }
+
+      .suit-style-spade .picker-key {
+        color: var(--color-suit-spade);
+      }
+
+      .suit-style-heart .picker-key {
+        color: var(--color-suit-heart);
+      }
+
+      .suit-style-club .picker-key {
+        color: var(--color-suit-club);
+      }
+
+      .suit-style-diamond .picker-key {
+        color: var(--color-suit-diamond);
+      }
+
+      .range-matrix-panel {
+        background: var(--panel-background);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 10px;
+        padding-bottom: 0;
+      }
+
+      .range-matrix-panel .section-header {
+        margin: 0;
+      }
+
+      @media (max-width: 500px) {
+        .range-matrix-panel .section-header {
+          flex-direction: column;
+        }
+
+        .villain-range-percent {
+          margin-bottom: 5px;
+        }
+      }
+
+      .range-matrix-grid {
+        display: grid;
+        grid-template-columns: repeat(13, 1fr);
+        gap: 1px;
+        background: #000;
+        border: 1px solid #333;
+        touch-action: none;
+        min-width: 580px;
+      }
+
+      .matrix-cell {
+        height: 40px;
+        min-width: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 13px;
+        background: #0f172a;
+        color: #475569;
+        cursor: pointer;
+        font-weight: 700;
+        border-radius: 2px;
+      }
+
+      .matrix-cell.type-pair {
+        background: var(--color-pair);
+        color: #000;
+      }
+
+      .matrix-cell.type-suited {
+        background: var(--color-suited);
+        color: #fff;
+      }
+
+      .matrix-cell.type-offsuit {
+        background: var(--color-offsuit);
+        color: #000;
+      }
+
+      .opponent-controls {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px;
+        margin-bottom: 5px;
+      }
+
+      .opponent-button {
+        background: var(--background-color);
+        border: 1px solid var(--border-color);
+        color: var(--muted-text-color);
+        padding: 4px 8px;
+        font-size: 10px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .opponent-button.state-active {
+        border-color: var(--accent-color);
+        color: var(--accent-color);
+        background: rgba(56, 189, 248, 0.1);
+        font-weight: bold;
+      }
+
+      .matrix-preset-controls {
+        display: flex;
+        gap: 5px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 5px;
+      }
+
+      .preset-chip-button {
+        background: var(--background-color);
+        border: 1px solid var(--border-color);
+        color: var(--muted-text-color);
+        padding: 5px 10px;
+        font-size: 10px;
+        border-radius: 20px;
+        cursor: pointer;
+      }
+
+      .preset-chip-button.state-active {
+        border-color: var(--accent-color);
+        color: var(--text-color);
+        background: rgba(56, 189, 248, 0.1);
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+      }
+
+      .preset-chip-button:hover {
+        border-color: var(--accent-color);
+        color: var(--text-color);
+      }
+
+      .collapsible-content-area-wrapper {
+        position: relative;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        background: #000;
+      }
+
+      .custom-scroll-handle {
+        display: none;
+      }
+
+      @media (max-width: 620px) and (pointer: coarse) {
+        .custom-scroll-handle {
+          display: flex;
+          position: sticky;
+          left: 0;
+          width: 100%;
+          height: 48px;
+          background: transparent;
+          border-top: 1px solid var(--border-color);
+          align-items: center;
+          justify-content: center;
+          z-index: 10;
+          touch-action: pan-x;
+        }
+
+        .collapsible-content-area-wrapper {
+          scrollbar-width: none;
+        }
+
+        .collapsible-content-area-wrapper::-webkit-scrollbar {
+          display: none;
+        }
+
+        .range-matrix-grid {
+          touch-action: none;
+        }
+      }
+
+      @media (min-width: 626px), (pointer: fine) {
+        .collapsible-content-area-wrapper {
+          overflow-x: auto;
+        }
+
+        .collapsible-content-area-wrapper::-webkit-scrollbar-thumb {
+          background: var(--border-color);
+          border-radius: 4px;
+        }
+      }
+
+      .collapsible-content-area-wrapper::-webkit-scrollbar {
+        display: none;
+      }
+
+      .collapsible-content-area-wrapper::-webkit-scrollbar-track {
+        background: #0f172a;
+        border-radius: 10px;
+      }
+
+      .collapsible-content-area-wrapper::-webkit-scrollbar-thumb {
+        background: var(--accent-color);
+        border: 3px solid #0f172a;
+        border-radius: 10px;
+        box-shadow: 0 0 10px var(--accent-color);
+      }
+
+      .collapsible-content-area-wrapper::-webkit-scrollbar-thumb:active {
+        background: #fff;
+        box-shadow: 0 0 20px var(--accent-color);
+      }
+
+      .collapsible-content-area-wrapper {
+        scrollbar-width: auto;
+        scrollbar-color: var(--accent-color) #0f172a;
+      }
+
+      .scroll-label {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(to bottom, #1e293b, #0f172a);
+        color: var(--accent-color);
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 5px;
+        text-shadow: 0 0 5px var(--accent-color);
+        pointer-events: none;
+      }
+
+      .collapsible-content-area {
+        display: block;
+        transition: max-height 0.3s ease-out;
+      }
+
+      .collapsible-content-area.is-collapsed {
+        display: none;
+      }
+
+      .collapse-toggle-button {
+        background: transparent;
+        border: none;
+        color: var(--muted-text-color);
+        cursor: pointer;
+        font-size: 14px;
+        padding: 0 5px;
+      }
+
+      .collapse-toggle-button:hover {
+        color: var(--text-color);
+      }
+
+      .side-statistics-panel {
+        background: var(--panel-background);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 15px;
+        height: 100%;
+      }
+
+      .equity-display-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 10px;
+      }
+
+      .equity-value-text {
+        font-size: 56px;
+        font-weight: 900;
+        line-height: 0.9;
+        color: var(--accent-color);
+      }
+
+      .hand-status-text {
+        font-size: 11px;
+        color: var(--muted-text-color);
+        text-align: right;
+      }
+
+      .pot-odds-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 8px;
+        border-radius: 6px;
+      }
+
+      .odds-input-group {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        color: var(--muted-text-color);
+      }
+
+      .input-dark-theme {
+        width: 70px;
+        background: var(--background-color);
+        border: 1px solid var(--border-color);
+        color: #fff;
+        padding: 6px;
+        text-align: center;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+
+      .odds-result-display {
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .distribution-bars-wrapper {
+        margin-top: 10px;
+      }
+
+      .bar-item-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 4px;
+        font-size: 11px;
+      }
+
+      .bar-label {
+        width: 60px;
+        text-align: right;
+        margin-right: 8px;
+        color: var(--muted-text-color);
+      }
+
+      .bar-track {
+        flex: 1;
+        background: #334155;
+        height: 5px;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        height: 100%;
+        transition: width 0.3s;
+      }
+
+      .bar-value-text {
+        width: 30px;
+        text-align: right;
+        color: #fff;
+        font-weight: bold;
+      }
+
+      .navigation-tabs {
+        display: flex;
+        background: var(--panel-background);
+        padding: 4px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border: 1px solid var(--border-color);
+      }
+
+      .tab-button {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--muted-text-color);
+        padding: 8px;
+        font-size: 11px;
+        font-weight: 800;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+
+      .tab-button.state-active {
+        background: #334155;
+        color: #fff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .custom-select-wrapper {
+        position: relative;
+        user-select: none;
+        width: 100%;
+        margin-bottom: 10px;
+        z-index: 100;
+      }
+
+      .custom-select-trigger {
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-color);
+        background: var(--background-color);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: border-color 0.2s;
+      }
+
+      .custom-select-trigger:hover {
+        border-color: var(--accent-color);
+      }
+
+      .custom-options-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--panel-background);
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        display: none;
+        z-index: 999;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      }
+
+      .custom-options-dropdown.state-open {
+        display: block;
+      }
+
+      .dropdown-option {
+        padding: 10px 12px;
+        font-size: 12px;
+        color: var(--muted-text-color);
+        cursor: pointer;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .dropdown-option:hover {
+        background: #334155;
+        color: #fff;
+      }
+
+      .icon-arrow {
+        font-size: 10px;
+        color: var(--muted-text-color);
+      }
+      .reset-all-button {
+        width: 100%;
+        background: #ef4444;
+        color: white;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-bottom: 10px;
+      }
+
+      @media (min-width: 1024px) {
+        .picker-key {
+          width: 42px;
+          height: 48px;
+          font-size: 15px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main-container">
+      <div class="navigation-tabs">
+        <button
+          class="tab-button state-active"
+          onclick="setApplicationMode('range')"
+          id="tab-button-range"
+        >
+          TRAINING (VS RANGE)
+        </button>
+        <button
+          class="tab-button"
+          onclick="setApplicationMode('manual')"
+          id="tab-button-manual"
+        >
+          PVP (HAND VS HAND)
+        </button>
+      </div>
+
+      <div class="custom-select-wrapper">
+        <div class="custom-select-trigger" onclick="toggleScenarioDropdown()">
+          <span id="current-scenario-text">⚡ Load Scenario...</span>
+          <span class="icon-arrow">▼</span>
+        </div>
+        <div class="custom-options-dropdown" id="dropdown-options-container">
+          <div
+            class="dropdown-option"
+            onclick="pickScenario('cooler', 'Cooler (AA vs KK)')"
+          >
+            Cooler (AA vs KK)
+          </div>
+          <div
+            class="dropdown-option"
+            onclick="pickScenario('flip', 'Flip (AK vs QQ)')"
+          >
+            Flip (AK vs QQ)
+          </div>
+          <div
+            class="dropdown-option"
+            onclick="pickScenario('domination', 'Domination (AK vs AQ)')"
+          >
+            Domination (AK vs AQ)
+          </div>
+          <div
+            class="dropdown-option"
+            onclick="pickScenario('set_flush', 'Set vs Flush Draw')"
+          >
+            Set vs Flush Draw
+          </div>
+        </div>
+      </div>
+
+      <div class="layout-grid-container">
+        <div class="area-playing-cards">
+          <div class="section-header">
+            <span class="text-label">Hero (You)</span>
+            <button class="button-mini" onclick="clearCardSlots('hero')">
+              Clear
+            </button>
+          </div>
+          <div class="card-slots-row" id="slots-hero-container"></div>
+
+          <div id="villain-interface-container" style="display: none">
+            <div class="section-header">
+              <span class="text-label" style="color: #f87171"
+                >Villain (Opponent)</span
+              >
+              <button class="button-mini" onclick="clearCardSlots('villain')">
+                Clear
+              </button>
+            </div>
+            <div class="card-slots-row" id="slots-villain-container"></div>
+          </div>
+
+          <div class="section-header">
+            <span class="text-label">Board</span>
+            <button class="button-mini" onclick="clearCardSlots('board')">
+              Clear
+            </button>
+          </div>
+          <div class="card-slots-row" id="slots-board-container"></div>
+        </div>
+
+        <div class="area-statistics">
+          <div class="side-statistics-panel">
+            <div class="section-header">
+              <span class="text-label" style="color: var(--accent-color)"
+                >WIN EQUITY</span
+              >
+            </div>
+            <div class="equity-display-row">
+              <div class="equity-value-text" id="equity-value-display">0%</div>
+              <div class="hand-status-text" id="hand-status-display">...</div>
+            </div>
+            <div
+              class="pot-odds-container"
+              style="
+                background: rgba(0, 0, 0, 0.2);
+                padding: 10px;
+                border-radius: 8px;
+                margin-bottom: 10px;
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  margin-bottom: 8px;
+                "
+              >
+                <div class="odds-input-group">
+                  <span style="color: #94a3b8; font-size: 10px"
+                    >Total Pot:</span
+                  >
+                  <input
+                    type="number"
+                    id="pot-size-input"
+                    value="100"
+                    class="input-dark-theme"
+                    oninput="updateApplicationState()"
+                  />
+                </div>
+                <div class="odds-input-group">
+                  <span style="color: #94a3b8; font-size: 10px">To Call:</span>
+                  <input
+                    type="number"
+                    id="call-amount-input"
+                    value="50"
+                    class="input-dark-theme"
+                    oninput="updateApplicationState()"
+                  />
+                </div>
+              </div>
+
+              <div
+                id="odds-calculation-result"
+                style="
+                  background: #334155;
+                  border-radius: 6px;
+                  padding: 8px;
+                  text-align: center;
+                  font-size: 12px;
+                  font-weight: bold;
+                  color: #fff;
+                  transition: 0.3s;
+                "
+              >
+                Enter Pot & Call
+              </div>
+            </div>
+            <div
+              id="distribution-bars-container"
+              class="distribution-bars-wrapper"
+            ></div>
+            <div id="opponent-ui-wrapper">
+              <div
+                class="text-label"
+                style="text-align: center; margin-bottom: 4px; font-size: 9px"
+              >
+                Opponent Count:
+              </div>
+              <div class="opponent-controls" id="opponent-count-buttons"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="area-card-picker">
+          <button class="reset-all-button" onclick="resetApplication()">
+            RESET ALL
+          </button>
+          <div id="card-picker-interface" class="card-picker-panel"></div>
+        </div>
+
+        <div class="area-range-selector">
+          <div class="range-matrix-panel" id="ui-range-selector">
+            <div class="section-header">
+              <div class="range-presets-wrapper">
+                <div class="text-label range-presets">
+                  Villain Range Presets
+                </div>
+                <div class="matrix-preset-controls">
+                  <button
+                    class="preset-chip-button"
+                    onclick="applyRangePreset(100, event)"
+                  >
+                    All
+                  </button>
+                  <button
+                    class="preset-chip-button"
+                    onclick="applyRangePreset(20, event)"
+                  >
+                    Top 20%
+                  </button>
+                  <button
+                    class="preset-chip-button"
+                    onclick="applyRangePreset('pairs', event)"
+                  >
+                    Pairs
+                  </button>
+                  <button
+                    class="preset-chip-button"
+                    onclick="applyRangePreset('broadway', event)"
+                  >
+                    Broad
+                  </button>
+                  <button
+                    class="preset-chip-button"
+                    onclick="applyRangePreset(0, event)"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              <div class="text-label villain-range-percent">
+                Range Width:
+                <div id="range-percentage-text">100%</div>
+                <button
+                  class="collapse-toggle-button"
+                  onclick="toggleRangeDisplay()"
+                >
+                  ▼
+                </button>
+              </div>
+            </div>
+
+            <div id="range-selector-content" class="collapsible-content-area">
+              <div class="collapsible-content-area-wrapper">
+                <div
+                  class="range-matrix-grid"
+                  id="hand-matrix-grid"
+                  onmousedown="startDragSelection()"
+                  onmouseup="endDragSelection()"
+                  onmouseleave="endDragSelection()"
+                ></div>
+                <div class="custom-scroll-handle">
+                  <div class="scroll-label">◄ SWIPE ►</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Card configurations
+      const cardSuits = [
+        { key: "s", symbol: "♠", cssClass: "suit-style-spade" },
+        { key: "h", symbol: "♥", cssClass: "suit-style-heart" },
+        { key: "c", symbol: "♣", cssClass: "suit-style-club" },
+        { key: "d", symbol: "♦", cssClass: "suit-style-diamond" },
+      ];
+      const cardRanks = [
+        "A",
+        "K",
+        "Q",
+        "J",
+        "10",
+        "9",
+        "8",
+        "7",
+        "6",
+        "5",
+        "4",
+        "3",
+        "2",
+      ];
+
+      // State variables for the application
+      let cardDeck = [],
+        heroHand = [null, null],
+        villainHand = [null, null],
+        boardCards = [null, null, null, null, null];
+
+      let activeSelectionState = { area: "hero", index: 0 };
+      let applicationMode = "range";
+      let opponentCount = 1;
+      let selectedHandRangeSet = new Set();
+      let handCombinationsMap = {};
+      let isMouseDragging = false;
+      let isDragAddingMode = true;
+
+      // Predefined Poker Scenarios
+      const predefinedScenarios = {
+        cooler: { hero: ["Ah", "As"], villain: ["Kh", "Ks"], board: [] },
+        flip: { hero: ["Ah", "Ks"], villain: ["Qh", "Qd"], board: [] },
+        domination: { hero: ["Ah", "Kh"], villain: ["Ad", "Qd"], board: [] },
+        set_flush: {
+          hero: ["7s", "7c"],
+          villain: ["As", "Ks"],
+          board: ["2s", "9s", "7d"],
+        },
+      };
+
+      // Initializes the application: creates the deck, builds the range matrix, and renders initial UI components.
+      function initializePokerApp() {
+        cardDeck = [];
+        cardSuits.forEach((suitObj) =>
+          cardRanks.forEach((rankChar) => {
+            let numericValue = parseInt(rankChar);
+            if (rankChar == "J") numericValue = 11;
+            if (rankChar == "Q") numericValue = 12;
+            if (rankChar == "K") numericValue = 13;
+            if (rankChar == "A") numericValue = 14;
+            cardDeck.push({
+              id: rankChar + suitObj.key,
+              rank: rankChar,
+              suit: suitObj,
+              value: numericValue,
+            });
+          })
+        );
+
+        buildRangeMatrix();
+        renderOpponentCountButtons();
+        applyRangePreset(100);
+        renderCardSlots();
+        renderCardPicker();
+      }
+
+      // Switches between 'Training' (Range) and 'PvP' (Manual) modes. Handles UI visibility and resets opponent count for PvP.
+      function setApplicationMode(mode) {
+        applicationMode = mode;
+
+        document.getElementById("tab-button-range").className = `tab-button ${
+          mode == "range" ? "state-active" : ""
+        }`;
+        document.getElementById("tab-button-manual").className = `tab-button ${
+          mode == "manual" ? "state-active" : ""
+        }`;
+
+        document.getElementById("ui-range-selector").style.display =
+          mode == "range" ? "block" : "none";
+        document.getElementById("villain-interface-container").style.display =
+          mode == "manual" ? "block" : "none";
+
+        const oppWrapper = document.getElementById("opponent-ui-wrapper");
+
+        if (mode == "manual") {
+          if (oppWrapper) oppWrapper.style.display = "none";
+
+          if (
+            activeSelectionState.area == "hero" &&
+            activeSelectionState.index > 1
+          ) {
+            activeSelectionState = { area: "villain", index: 0 };
+          }
+
+          opponentCount = 1;
+          renderOpponentCountButtons();
+        } else {
+          if (oppWrapper) oppWrapper.style.display = "block";
+        }
+
+        updateApplicationState();
+      }
+
+      // Loads a specific poker scenario (e.g., 'Cooler'). Sets up Hero/Villain hands and Board, then auto-focuses the appropriate card slot.
+      function loadPokerScenario(scenarioKey) {
+        if (!scenarioKey || !predefinedScenarios[scenarioKey]) return;
+        setApplicationMode("manual");
+        const currentScenario = predefinedScenarios[scenarioKey];
+        heroHand = [
+          cardDeck.find((card) => card.id == currentScenario.hero[0]),
+          cardDeck.find((card) => card.id == currentScenario.hero[1]),
+        ];
+        villainHand = [
+          cardDeck.find((card) => card.id == currentScenario.villain[0]),
+          cardDeck.find((card) => card.id == currentScenario.villain[1]),
+        ];
+        boardCards = [null, null, null, null, null];
+        currentScenario.board.forEach(
+          (id, index) =>
+            (boardCards[index] = cardDeck.find((card) => card.id == id))
+        );
+
+        const boardCount = currentScenario.board.length;
+
+        if (boardCount < 5) {
+          activeSelectionState = { area: "board", index: boardCount };
+        } else {
+          activeSelectionState = { area: "hero", index: 0 };
+        }
+        updateApplicationState();
+      }
+
+      function toggleRangeDisplay() {
+        const contentElement = document.getElementById(
+          "range-selector-content"
+        );
+        contentElement.classList.toggle("is-collapsed");
+      }
+
+      // Constructs the 13x13 hand range grid. Handles mouse and touch events for selecting/deselecting hand ranges.
+      function buildRangeMatrix() {
+        const matrixContainer = document.getElementById("hand-matrix-grid");
+        matrixContainer.innerHTML = "";
+
+        for (let rankIndex1 = 0; rankIndex1 < 13; rankIndex1++) {
+          for (let rankIndex2 = 0; rankIndex2 < 13; rankIndex2++) {
+            const cellElement = document.createElement("div");
+            let cellText = "",
+              handType = "";
+            if (rankIndex1 === rankIndex2) {
+              cellText = cardRanks[rankIndex1] + cardRanks[rankIndex1];
+              handType = "type-pair";
+            } else if (rankIndex1 < rankIndex2) {
+              cellText = cardRanks[rankIndex1] + cardRanks[rankIndex2] + "s";
+              handType = "type-suited";
+            } else {
+              cellText = cardRanks[rankIndex2] + cardRanks[rankIndex1] + "o";
+              handType = "type-offsuit";
+            }
+
+            cellElement.className = "matrix-cell";
+            cellElement.innerText = cellText;
+            cellElement.dataset.handLabel = cellText;
+            cellElement.dataset.handType = handType;
+
+            cellElement.onmousedown = () => {
+              startDragSelection();
+              isDragAddingMode = !selectedHandRangeSet.has(cellText);
+              toggleMatrixCell(cellText, isDragAddingMode);
+            };
+            cellElement.onmouseover = () => {
+              if (isMouseDragging) toggleMatrixCell(cellText, isDragAddingMode);
+            };
+
+            matrixContainer.appendChild(cellElement);
+            generateHandCombinations(
+              cellText,
+              handType,
+              rankIndex1,
+              rankIndex2
+            );
+          }
+        }
+
+        matrixContainer.addEventListener(
+          "touchstart",
+          (event) => {
+            const touch = event.touches[0];
+            const targetElement = document.elementFromPoint(
+              touch.clientX,
+              touch.clientY
+            );
+
+            if (
+              targetElement &&
+              targetElement.classList.contains("matrix-cell")
+            ) {
+              event.preventDefault();
+              startDragSelection();
+              const handLabel = targetElement.dataset.handLabel;
+
+              isDragAddingMode = !selectedHandRangeSet.has(handLabel);
+              toggleMatrixCell(handLabel, isDragAddingMode);
+            }
+          },
+          { passive: false }
+        );
+
+        matrixContainer.addEventListener(
+          "touchmove",
+          (event) => {
+            if (!isMouseDragging) return;
+            event.preventDefault();
+            const touch = event.touches[0];
+            const targetElement = document.elementFromPoint(
+              touch.clientX,
+              touch.clientY
+            );
+
+            if (
+              targetElement &&
+              targetElement.classList.contains("matrix-cell")
+            ) {
+              toggleMatrixCell(
+                targetElement.dataset.handLabel,
+                isDragAddingMode
+              );
+            }
+          },
+          { passive: false }
+        );
+
+        matrixContainer.addEventListener("touchend", () => {
+          isMouseDragging = false;
+          updateApplicationState();
+        });
+      }
+
+      // Generates specific card combinations (pairs) for a given matrix cell (e.g., converts 'AKs' into specific suited Ace-King pairs).
+      function generateHandCombinations(
+        handLabel,
+        handType,
+        rankIndex1,
+        rankIndex2
+      ) {
+        let combinationsList = [];
+        if (handType === "type-pair") {
+          let rankChar = cardRanks[rankIndex1];
+          for (let i = 0; i < 4; i++)
+            for (let j = i + 1; j < 4; j++)
+              combinationsList.push([
+                rankChar + cardSuits[i].key,
+                rankChar + cardSuits[j].key,
+              ]);
+        } else {
+          let rankCharA =
+            handType === "type-suited"
+              ? cardRanks[rankIndex1]
+              : cardRanks[rankIndex2];
+          let rankCharB =
+            handType === "type-suited"
+              ? cardRanks[rankIndex2]
+              : cardRanks[rankIndex1];
+          if (handType === "type-suited") {
+            for (let i = 0; i < 4; i++)
+              combinationsList.push([
+                rankCharA + cardSuits[i].key,
+                rankCharB + cardSuits[i].key,
+              ]);
+          } else {
+            for (let i = 0; i < 4; i++)
+              for (let j = 0; j < 4; j++)
+                if (i !== j)
+                  combinationsList.push([
+                    rankCharA + cardSuits[i].key,
+                    rankCharB + cardSuits[j].key,
+                  ]);
+          }
+        }
+        handCombinationsMap[handLabel] = combinationsList;
+      }
+
+      function startDragSelection() {
+        isMouseDragging = true;
+      }
+      function endDragSelection() {
+        if (isMouseDragging) {
+          isMouseDragging = false;
+          updateApplicationState();
+        }
+      }
+      function toggleMatrixCell(handLabel, forceSelectState) {
+        if (forceSelectState) selectedHandRangeSet.add(handLabel);
+        else selectedHandRangeSet.delete(handLabel);
+        updateMatrixVisuals();
+      }
+
+      // Applies predefined ranges (e.g., 'Pairs', 'Broadways') to the matrix based on the selected filter.
+      function applyRangePreset(presetValue, event) {
+        document.querySelectorAll(".preset-chip-button").forEach((btn) => {
+          btn.classList.remove("state-active");
+        });
+
+        if (event && event.currentTarget) {
+          event.currentTarget.classList.add("state-active");
+        }
+
+        selectedHandRangeSet.clear();
+        document.querySelectorAll(".matrix-cell").forEach((cell) => {
+          const handLabel = cell.dataset.handLabel,
+            handType = cell.dataset.handType;
+          let shouldSelect = false;
+          if (presetValue === 100) shouldSelect = true;
+          else if (presetValue === "pairs" && handType === "type-pair")
+            shouldSelect = true;
+          else if (presetValue === "broadway") {
+            if (
+              ["A", "K", "Q", "J", "10"].some((rank) =>
+                handLabel.includes(rank)
+              ) &&
+              !handLabel.includes("9")
+            )
+              shouldSelect = true;
+          } else if (typeof presetValue === "number" && presetValue > 0) {
+            if (
+              handType === "type-pair" &&
+              cardRanks.indexOf(handLabel[0]) < presetValue / 8
+            )
+              shouldSelect = true;
+            if (
+              handLabel.includes("A") &&
+              (handType === "type-suited" ||
+                cardRanks.indexOf(handLabel[1]) < 4)
+            )
+              shouldSelect = true;
+          }
+          if (shouldSelect) selectedHandRangeSet.add(handLabel);
+        });
+        updateMatrixVisuals();
+        updateApplicationState();
+      }
+
+      function updateMatrixVisuals() {
+        let totalCombosCount = 0;
+        document.querySelectorAll(".matrix-cell").forEach((cell) => {
+          if (selectedHandRangeSet.has(cell.dataset.handLabel)) {
+            cell.classList.add(cell.dataset.handType);
+            totalCombosCount +=
+              cell.dataset.handType === "type-pair"
+                ? 6
+                : cell.dataset.handType === "type-suited"
+                ? 4
+                : 12;
+          } else {
+            cell.className = "matrix-cell";
+          }
+        });
+        document.getElementById("range-percentage-text").innerText = `${(
+          (totalCombosCount / 1326) *
+          100
+        ).toFixed(1)}%`;
+      }
+
+      function renderOpponentCountButtons() {
+        const container = document.getElementById("opponent-count-buttons");
+        container.innerHTML = "";
+        for (let i = 1; i <= 8; i++) {
+          const button = document.createElement("button");
+          button.className = `opponent-button ${
+            opponentCount === i ? "state-active" : ""
+          }`;
+          button.innerText = i === 1 ? "1v1" : `vs${i}`;
+          button.onclick = () => {
+            opponentCount = i;
+            renderOpponentCountButtons();
+            updateApplicationState();
+          };
+          container.appendChild(button);
+        }
+      }
+
+      // Main update loop: refreshes the UI, renders card slots/picker, and triggers the Monte Carlo simulation if Hero has 2 cards.
+      function updateApplicationState() {
+        const activeHeroCards = heroHand.filter((card) => card),
+          activeBoardCards = boardCards.filter((card) => card);
+        const usedCardIds = [...heroHand, ...villainHand, ...boardCards]
+          .filter((card) => card)
+          .map((card) => card.id);
+
+        renderCardSlots();
+        renderCardPicker(usedCardIds);
+
+        if (activeHeroCards.length === 2) {
+          const evaluationResult = evaluateHandStrength([
+            ...activeHeroCards,
+            ...activeBoardCards,
+          ]);
+          document.getElementById("hand-status-display").innerText =
+            evaluationResult.label;
+          setTimeout(
+            () =>
+              runMonteCarloSimulation(
+                activeHeroCards,
+                activeBoardCards,
+                usedCardIds
+              ),
+            10
+          );
+        } else {
+          document.getElementById("hand-status-display").innerText =
+            "Select 2 Cards";
+          document.getElementById("equity-value-display").innerText = "0%";
+          document.getElementById("distribution-bars-container").innerHTML = "";
+          document.getElementById("odds-calculation-result").innerText = "-";
+        }
+      }
+
+      // Core simulation engine. Runs Monte Carlo simulations (600 iterations) to calculate Win Equity against opponent ranges or specific hands.
+      function runMonteCarloSimulation(
+        activeHeroCards,
+        activeBoardCards,
+        knownCardIds
+      ) {
+        const equityElement = document.getElementById("equity-value-display");
+        const barsContainer = document.getElementById(
+          "distribution-bars-container"
+        );
+        const oddsResult = document.getElementById("odds-calculation-result");
+
+        if (
+          (applicationMode == "range" && selectedHandRangeSet.size === 0) ||
+          (applicationMode == "manual" &&
+            villainHand.filter((card) => card).length < 2)
+        ) {
+          equityElement.innerText = "0%";
+          barsContainer.innerHTML = "";
+          return;
+        }
+
+        let availableRangeCombinations = [];
+        if (applicationMode == "range") {
+          selectedHandRangeSet.forEach((label) => {
+            if (handCombinationsMap[label]) {
+              handCombinationsMap[label].forEach((pairIds) => {
+                if (
+                  !knownCardIds.includes(pairIds[0]) &&
+                  !knownCardIds.includes(pairIds[1])
+                ) {
+                  availableRangeCombinations.push([
+                    cardDeck.find((c) => c.id == pairIds[0]),
+                    cardDeck.find((c) => c.id == pairIds[1]),
+                  ]);
+                }
+              });
+            }
+          });
+
+          const minRequiredCombos = opponentCount * 12; // Порог увеличен для vs8
+          if (availableRangeCombinations.length < minRequiredCombos) {
+            equityElement.innerText =
+              "Range too narrow for " + opponentCount + " players";
+            equityElement.style.fontSize = "16px";
+            barsContainer.innerHTML = "";
+            return;
+          }
+        }
+
+        let winsCount = 0,
+          tiesCount = 0,
+          validSimulations = 0,
+          simulationIterations = opponentCount > 4 ? 1000 : 600,
+          handRankDistribution = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+        for (let i = 0; i < simulationIterations; i++) {
+          let currentOpponents = [];
+          let tempDeck = cardDeck.filter(
+            (card) => !knownCardIds.includes(card.id)
+          );
+          let simulationValid = true;
+
+          if (applicationMode == "manual") {
+            currentOpponents.push(villainHand.filter((card) => card));
+          } else {
+            let attempts = 0;
+            let maxAttempts = opponentCount > 6 ? 1500 : 500;
+
+            for (let j = 0; j < opponentCount; j++) {
+              attempts++;
+              if (attempts > maxAttempts) {
+                simulationValid = false;
+                break;
+              }
+
+              let randomCombo =
+                availableRangeCombinations[
+                  Math.floor(Math.random() * availableRangeCombinations.length)
+                ];
+
+              let cardA = tempDeck.find((c) => c.id == randomCombo[0].id);
+              let cardB = tempDeck.find((c) => c.id == randomCombo[1].id);
+
+              if (cardA && cardB) {
+                currentOpponents.push(randomCombo);
+                tempDeck = tempDeck.filter(
+                  (c) => c.id != cardA.id && c.id != cardB.id
+                );
+                attempts = 0;
+              } else {
+                j--;
+              }
+            }
+          }
+
+          if (!simulationValid) continue;
+          validSimulations++;
+
+          let simulatedBoard = [...activeBoardCards];
+          let boardDeck = [...tempDeck];
+          while (simulatedBoard.length < 5) {
+            simulatedBoard.push(
+              boardDeck.splice(
+                Math.floor(Math.random() * boardDeck.length),
+                1
+              )[0]
+            );
+          }
+
+          let heroEvaluation = evaluateHandStrength([
+            ...activeHeroCards,
+            ...simulatedBoard,
+          ]);
+          let maxOpponentScore = -1;
+          let isTie = false;
+
+          for (let opponentHand of currentOpponents) {
+            let opponentScore = evaluateHandStrength([
+              ...opponentHand,
+              ...simulatedBoard,
+            ]).score;
+            if (opponentScore > maxOpponentScore) {
+              maxOpponentScore = opponentScore;
+              isTie = false;
+            } else if (opponentScore === maxOpponentScore) {
+              isTie = true;
+            }
+          }
+
+          if (heroEvaluation.score > maxOpponentScore) {
+            winsCount++;
+            handRankDistribution[heroEvaluation.rankIndex]++;
+          } else if (heroEvaluation.score === maxOpponentScore) {
+            tiesCount++;
+          }
+        }
+
+        if (validSimulations === 0) {
+          equityElement.innerText = "Collision: Expand Range";
+          equityElement.style.fontSize = "18px";
+          equityElement.style.color = "#f59e0b";
+          return;
+        }
+
+        // Equity = (Wins + Ties/2) / Valid games
+        const winEquity = Math.round(
+          ((winsCount + tiesCount / 2) / validSimulations) * 100
+        );
+
+        equityElement.style.fontSize = "56px";
+        equityElement.innerText = winEquity + "%";
+        equityElement.style.color =
+          winEquity > 50
+            ? "var(--accent-color)"
+            : winEquity < 25
+            ? "#ef4444"
+            : "#f59e0b";
+
+        calculatePotOdds(winEquity);
+        renderDistributionBars(handRankDistribution, winsCount);
+      }
+
+      // Calculates Pot Odds and Required Equity based on user input. Displays 'CALL' or 'FOLD' recommendations with visual indicators.
+      function calculatePotOdds(winEquity) {
+        const potSize =
+          parseFloat(document.getElementById("pot-size-input").value) || 0;
+        const callAmount =
+          parseFloat(document.getElementById("call-amount-input").value) || 0;
+        const resultElement = document.getElementById(
+          "odds-calculation-result"
+        );
+
+        if (potSize === 0 || callAmount === 0) {
+          resultElement.style.background = "#334155";
+          resultElement.innerHTML = "Enter Pot & Call amounts";
+          return;
+        }
+
+        const finalPot = potSize + callAmount;
+
+        const requiredEquity = (callAmount / finalPot) * 100;
+
+        const ratio = (potSize / callAmount).toFixed(1);
+
+        const diff = winEquity - requiredEquity;
+        const isCall = diff >= 0;
+
+        if (isCall) {
+          resultElement.style.background = "rgba(74, 222, 128, 0.2)"; //
+          resultElement.style.border = "1px solid #4ade80";
+          resultElement.style.color = "#4ade80";
+          resultElement.innerHTML = `
+            <div style="font-size: 14px; margin-bottom: 2px;">✅ CALL</div>
+            <div style="font-size: 10px; opacity: 0.8;">
+              Odds ${ratio}:1 (Need ${requiredEquity.toFixed(0)}%) <br>
+              My Equity: ${winEquity}%
+            </div>
+          `;
+        } else {
+          resultElement.style.background = "rgba(239, 68, 68, 0.2)"; //
+          resultElement.style.border = "1px solid #ef4444";
+          resultElement.style.color = "#ef4444";
+          resultElement.innerHTML = `
+            <div style="font-size: 14px; margin-bottom: 2px;">❌ FOLD</div>
+            <div style="font-size: 10px; opacity: 0.8;">
+              Odds ${ratio}:1 (Need ${requiredEquity.toFixed(0)}%) <br>
+              My Equity: ${winEquity}%
+            </div>
+          `;
+        }
+      }
+
+      function renderCardSlots() {
+        renderSingleRow("slots-hero-container", heroHand, "hero");
+        renderSingleRow("slots-villain-container", villainHand, "villain");
+        renderSingleRow("slots-board-container", boardCards, "board");
+      }
+
+      function renderSingleRow(containerId, cardArray, areaType) {
+        const containerDiv = document.getElementById(containerId);
+        if (!containerDiv) return;
+        containerDiv.innerHTML = "";
+        cardArray.forEach((card, index) => {
+          const cardElement = document.createElement("div");
+          const isActiveSlot =
+            activeSelectionState.area === areaType &&
+            activeSelectionState.index === index;
+          cardElement.className = `playing-card ${
+            isActiveSlot ? "state-active" : ""
+          } ${card ? "state-filled " + card.suit.cssClass : ""}`;
+          if (card) {
+            cardElement.innerHTML = `<div class="card-rank-text">${card.rank}</div><div class="card-suit-small">${card.suit.symbol}</div><div class="card-suit-large">${card.suit.symbol}</div>`;
+            cardElement.onclick = () => {
+              activeSelectionState = { area: areaType, index: index };
+
+              cardArray[index] = null;
+              updateApplicationState();
+            };
+          } else {
+            cardElement.innerHTML = "+";
+            cardElement.onclick = () => {
+              activeSelectionState = { area: areaType, index: index };
+              renderCardSlots();
+              renderCardPicker(
+                [...heroHand, ...villainHand, ...boardCards]
+                  .filter((card) => card)
+                  .map((card) => card.id)
+              );
+            };
+          }
+          containerDiv.appendChild(cardElement);
+        });
+      }
+
+      function renderCardPicker(usedCardIds) {
+        if (!usedCardIds)
+          usedCardIds = [...heroHand, ...villainHand, ...boardCards]
+            .filter((card) => card)
+            .map((card) => card.id);
+        const pickerContainer = document.getElementById(
+          "card-picker-interface"
+        );
+        pickerContainer.innerHTML = "";
+
+        cardSuits.forEach((suitObj) => {
+          const rowDiv = document.createElement("div");
+          rowDiv.className = `picker-row ${suitObj.cssClass}`;
+          cardDeck
+            .filter((card) => card.suit.key == suitObj.key)
+            .forEach((card) => {
+              const keyButton = document.createElement("div");
+              keyButton.className = `picker-key ${
+                usedCardIds.includes(card.id) ? "state-selected" : ""
+              }`;
+              keyButton.innerHTML = `${card.rank}<span class="picker-key-suit">${card.suit.symbol}</span>`;
+              keyButton.onclick = () => {
+                if (usedCardIds.includes(card.id)) return;
+
+                if (activeSelectionState.area == "hero")
+                  heroHand[activeSelectionState.index] = card;
+                else if (activeSelectionState.area == "villain")
+                  villainHand[activeSelectionState.index] = card;
+                else boardCards[activeSelectionState.index] = card;
+
+                if (activeSelectionState.area == "hero") {
+                  if (activeSelectionState.index == 0)
+                    activeSelectionState.index = 1;
+                  else activeSelectionState = { area: "board", index: 0 };
+                } else if (activeSelectionState.area == "villain") {
+                  if (activeSelectionState.index == 0)
+                    activeSelectionState.index = 1;
+                  else activeSelectionState = { area: "board", index: 0 };
+                } else if (activeSelectionState.index < 4)
+                  activeSelectionState.index++;
+                updateApplicationState();
+              };
+              rowDiv.appendChild(keyButton);
+            });
+          pickerContainer.appendChild(rowDiv);
+        });
+      }
+
+      function renderDistributionBars(distributionArray, totalWins) {
+        const barsContainer = document.getElementById(
+          "distribution-bars-container"
+        );
+        barsContainer.innerHTML = "";
+        if (totalWins == 0) return;
+        const handNames = [
+          "High",
+          "Pair",
+          "2Pair",
+          "Set",
+          "Str",
+          "Flush",
+          "FH",
+          "Quads",
+          "SF",
+        ];
+        const barColors = [
+          "#475569",
+          "#64748b",
+          "#94a3b8",
+          "#3b82f6",
+          "#2563eb",
+          "#4f46e5",
+          "#8b5cf6",
+          "#d946ef",
+          "#f43f5e",
+        ];
+        distributionArray
+          .map((value, index) => ({
+            name: handNames[index],
+            percentage: Math.round((value / totalWins) * 100),
+            color: barColors[index],
+          }))
+          .filter((item) => item.percentage > 0)
+          .sort((a, b) => b.percentage - a.percentage)
+          .slice(0, 4)
+          .forEach((item) => {
+            barsContainer.innerHTML += `<div class="bar-item-row"><div class="bar-label">${item.name}</div><div class="bar-track"><div class="bar-fill" style="width:${item.percentage}%; background:${item.color}"></div></div><div class="bar-value-text">${item.percentage}%</div></div>`;
+          });
+      }
+
+      function clearCardSlots(areaType) {
+        if (areaType == "hero") heroHand = [null, null];
+        if (areaType == "villain") villainHand = [null, null];
+        if (areaType == "board") boardCards = [null, null, null, null, null];
+        updateApplicationState();
+      }
+
+      function resetApplication() {
+        heroHand = [null, null];
+        villainHand = [null, null];
+        boardCards = [null, null, null, null, null];
+        activeSelectionState = { area: "hero", index: 0 };
+        applyRangePreset(100);
+        document.getElementById("current-scenario-text").innerText =
+          "⚡ Load Scenario...";
+      }
+
+      // Evaluates a 7-card hand to determine its rank (Flush, Straight, etc.) and assigns a numerical score for comparison.
+      function evaluateHandStrength(cardsToEvaluate) {
+        const rankFrequencyMap = {},
+          suitFrequencyMap = {};
+        cardsToEvaluate.forEach((card) => {
+          rankFrequencyMap[card.value] =
+            (rankFrequencyMap[card.value] || 0) + 1;
+          suitFrequencyMap[card.suit.key] =
+            (suitFrequencyMap[card.suit.key] || 0) + 1;
+        });
+
+        const sortedCards = cardsToEvaluate.sort((a, b) => b.value - a.value);
+
+        const flushSuitKeySF = Object.keys(suitFrequencyMap).find(
+          (key) => suitFrequencyMap[key] >= 5
+        );
+
+        if (flushSuitKeySF) {
+          const suitedCards = sortedCards.filter(
+            (c) => c.suit.key === flushSuitKeySF
+          );
+
+          let suitedRanks = [...new Set(suitedCards.map((c) => c.value))];
+
+          for (let i = 0; i <= suitedRanks.length - 5; i++) {
+            if (suitedRanks[i] - suitedRanks[i + 4] === 4) {
+              return {
+                score: 9e9 + suitedRanks[i], // Ранг 9e9 выше каре (8e9)
+                label: suitedRanks[i] === 14 ? "Royal Flush" : "Straight Flush",
+                rankIndex: 8,
+              };
+            }
+          }
+
+          const isWheelSF = [14, 5, 4, 3, 2].every((rank) =>
+            suitedRanks.includes(rank)
+          );
+          if (isWheelSF) {
+            return {
+              score: 9e9 + 5,
+              label: "Straight Flush",
+              rankIndex: 8,
+            };
+          }
+        }
+
+        const rankGroups = Object.keys(rankFrequencyMap)
+          .map((key) => ({
+            rankValue: Number(key),
+            count: rankFrequencyMap[key],
+          }))
+          .sort((a, b) => b.count - a.count || b.rankValue - a.rankValue);
+
+        if (rankGroups[0].count === 4)
+          return {
+            score: 8e9 + rankGroups[0].rankValue,
+            label: "Quads",
+            rankIndex: 7,
+          };
+
+        if (rankGroups[0].count === 3 && rankGroups[1]?.count >= 2)
+          return {
+            score:
+              7e9 + rankGroups[0].rankValue * 100 + rankGroups[1].rankValue,
+            label: "Full House",
+            rankIndex: 6,
+          };
+
+        const flushSuitKey = Object.keys(suitFrequencyMap).find(
+          (key) => suitFrequencyMap[key] >= 5
+        );
+
+        if (flushSuitKey) {
+          const highFlushCard = sortedCards.find(
+            (card) => card.suit.key == flushSuitKey
+          );
+
+          return {
+            score: 6e9 + highFlushCard.value,
+            label: "Flush",
+            rankIndex: 5,
+          };
+        }
+
+        let uniqueRanks = [...new Set(sortedCards.map((card) => card.value))];
+        for (let i = 0; i <= uniqueRanks.length - 5; i++) {
+          if (uniqueRanks[i] - uniqueRanks[i + 4] === 4) {
+            return {
+              score: 5e9 + uniqueRanks[i],
+              label: "Straight",
+              rankIndex: 4,
+            };
+          }
+        }
+
+        const isWheel = [14, 5, 4, 3, 2].every((rank) =>
+          uniqueRanks.includes(rank)
+        );
+        if (isWheel) {
+          return {
+            score: 5e9 + 5,
+            label: "Straight",
+            rankIndex: 4,
+          };
+        }
+
+        if (rankGroups[0].count === 3)
+          return {
+            score: 4e9 + rankGroups[0].rankValue,
+            label: "Set",
+            rankIndex: 3,
+          };
+
+        if (rankGroups[0].count === 2 && rankGroups[1]?.count === 2) {
+          const kicker =
+            rankGroups.find((group) => group.count === 1)?.rankValue || 0;
+          return {
+            score:
+              3e9 +
+              rankGroups[0].rankValue * 10000 +
+              rankGroups[1].rankValue * 100 +
+              kicker,
+            label: "Two Pairs",
+            rankIndex: 2,
+          };
+        }
+
+        if (rankGroups[0].count === 2) {
+          const kickers = sortedCards
+            .filter((card) => card.value !== rankGroups[0].rankValue)
+            .slice(0, 3);
+          const kickerScore = kickers.reduce(
+            (accumulator, currentValue, index) =>
+              accumulator + currentValue.value * Math.pow(0.01, index + 1),
+            0
+          );
+          return {
+            score: 2e9 + rankGroups[0].rankValue + kickerScore,
+            label: "Pair",
+            rankIndex: 1,
+          };
+        }
+
+        return {
+          score:
+            1e9 +
+            sortedCards[0].value +
+            (sortedCards[1] ? sortedCards[1].value * 0.01 : 0),
+          label: "High Card",
+          rankIndex: 0,
+        };
+      }
+
+      function toggleScenarioDropdown() {
+        const menu = document.getElementById("dropdown-options-container");
+        menu.classList.toggle("state-open");
+
+        const trigger = document.querySelector(".custom-select-trigger");
+        if (menu.classList.contains("state-open")) {
+          trigger.style.borderColor = "var(--accent-color)";
+          trigger.style.borderBottomLeftRadius = "0";
+          trigger.style.borderBottomRightRadius = "0";
+        } else {
+          trigger.style.borderColor = "var(--border-color)";
+          trigger.style.borderRadius = "6px";
+        }
+      }
+
+      function pickScenario(key, textDescription) {
+        document.getElementById("current-scenario-text").innerText =
+          "⚡ " + textDescription;
+        toggleScenarioDropdown();
+        loadPokerScenario(key);
+      }
+
+      window.onclick = function (event) {
+        if (!event.target.closest(".custom-select-wrapper")) {
+          const menu = document.getElementById("dropdown-options-container");
+          const trigger = document.querySelector(".custom-select-trigger");
+          if (menu.classList.contains("state-open")) {
+            menu.classList.remove("state-open");
+            trigger.style.borderColor = "var(--border-color)";
+            trigger.style.borderRadius = "6px";
+          }
+        }
+      };
+
+      function findNextEmptySlot() {
+        for (let i = 0; i < 2; i++) {
+          if (!heroHand[i]) return { area: "hero", index: i };
+        }
+
+        if (applicationMode === "manual") {
+          for (let i = 0; i < 2; i++) {
+            if (!villainHand[i]) return { area: "villain", index: i };
+          }
+        }
+
+        for (let i = 0; i < 5; i++) {
+          if (!boardCards[i]) return { area: "board", index: i };
+        }
+
+        return { area: null, index: -1 };
+      }
+
+      initializePokerApp();
+    </script>
+  </body>
+</html>
